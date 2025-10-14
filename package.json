@@ -1,0 +1,22 @@
+{
+    "name": "usst-cas-auto-login",
+    "version": "0.6.0",
+    "description": "Automates login to the USST CAS authentication page",
+    "main": "src/user.js",
+    "scripts": {
+        "lint": "eslint src/**/*.js",
+        "lint:fix": "eslint src/**/*.js --fix"
+    },
+    "keywords": [
+        "tampermonkey",
+        "userscript",
+        "auto-login",
+        "usst"
+    ],
+    "author": "Your Name",
+    "license": "MIT",
+    "devDependencies": {
+        "eslint": "^8.57.0",
+        "eslint-plugin-userscripts": "^0.7.2"
+    }
+}
