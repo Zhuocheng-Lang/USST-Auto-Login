@@ -24,12 +24,16 @@
 
     - 前往 [Tampermonkey 官网](https://www.tampermonkey.net/) 安装适用于你浏览器的扩展
 
-2. 添加脚本（手动方式）
+2. 添加脚本
 
-    - 点击浏览器右上角 Tampermonkey 图标 → 创建新脚本…
-    - 删除编辑器中默认模板代码
-    - 将本仓库 `src/user.js` 的全部内容复制粘贴到编辑器中
-    - 保存（Ctrl/Cmd + S）
+   2.1. 自动安装
+       - 通过 [Greasy Fork](https://update.greasyfork.org/scripts/552545/USST%20CAS%20Auto%20Login.user.js)
+   
+   2.2. 手动安装
+       - 点击浏览器右上角 Tampermonkey 图标 → 创建新脚本…
+       - 删除编辑器中默认模板代码
+       - 将本仓库 `src/user.js` 的全部内容复制粘贴到编辑器中
+       - 保存（Ctrl/Cmd + S）
 
 3. 首次使用
 
@@ -103,3 +107,4 @@ Q: 能自动过验证码吗？
 ## 免责声明
 
 本脚本仅用于学习与效率提升，请遵守学校与网站的使用政策。使用本脚本造成的任何后果由使用者自行承担。
+
