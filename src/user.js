@@ -7,12 +7,15 @@
 // @license      MIT
 // @icon         https://www.usst.edu.cn/_upload/tpl/00/40/64/template64/favicon.ico
 // @match        *://ids6.usst.edu.cn/*
+// @match        *://courses.usst.edu.cn/auth/*
 // @noframes
 // @grant        GM_log
 // @grant        GM_setValue
 // @grant        GM_getValue
 // @grant        GM_registerMenuCommand
 // @run-at       document-idle
+// @downloadURL  https://update.greasyfork.org/scripts/552545/USST%20CAS%20Auto%20Login.user.js
+// @updateURL    https://update.greasyfork.org/scripts/552545/USST%20CAS%20Auto%20Login.meta.js
 // ==/UserScript==
 
 (function () {
@@ -230,7 +233,153 @@
     }
 
     /**
-     * Auto login function
+     * Auto login function for CAS (ids6.usst.edu.cn)
+     */
+    async function autoLoginCAS() {
+        log('autoLoginCAS function called.');
+
+        // Get configuration
+        const config = await getConfig();
+        if (!config) {
+            log('无配置信息,退出自动登录');
+            return;
+        }
+
+        const {
+            username: username_value,
+            password: password_value,
+            actionDelay = 100
+        } = config;
+
+        const loginForm = await waitForElement('#casLoginForm', 5000);
+        if (!loginForm) {
+            log('Login form not found after waiting. Exiting.');
+            return;
+        }
+        log('Recognized as CAS login page.');
+        log(`Login form found. Action: ${loginForm.action}`);
+
+        // 等待用户名和密码字段加载
+        const usernameField = await waitForElement('#username', 3000);
+        const passwordField = await waitForElement('#password', 3000);
+
+        if (!usernameField || !passwordField) {
+            log('Username or password field not found after waiting.');
+            return;
+        }
+
+        // Check if fields are available
+        if (usernameField.disabled || passwordField.disabled) {
+            log('Username or password field is disabled.');
+            return;
+        }
+
+        // Fill form and trigger events (simulate user input)
+        fillFieldWithEvents(usernameField, username_value);
+        log('Username field populated with events.');
+
+        await sleep(actionDelay / 2); // Short delay between username and password
+
+        fillFieldWithEvents(passwordField, password_value);
+        log('Password field populated with events.');
+
+        // Use configured actionDelay
+        await sleep(actionDelay);
+        log(`Waited ${actionDelay}ms for event processing.`);
+
+        // Trigger blur events (may trigger captcha check)
+        usernameField.dispatchEvent(new Event('blur', { bubbles: true }));
+        passwordField.dispatchEvent(new Event('blur', { bubbles: true }));
+
+        // Check if captcha is required
+        const captchaImg = document.getElementById('captchaImg');
+        const needsCaptcha = captchaImg && captchaImg.querySelector('img');
+
+        if (needsCaptcha) {
+            log('Captcha detected. Waiting for user input...');
+            // If captcha is required, wait longer or return directly
+            await sleep(actionDelay * 10);
+        } else {
+            log('No captcha detected. Proceeding with auto-submit.');
+            await sleep(actionDelay * 2);
+        }
+
+        // Submit form
+        await submitForm(loginForm);
+    }
+
+    /**
+     * Auto login function for Courses (courses.usst.edu.cn)
+     */
+    async function autoLoginCourses() {
+        log('autoLoginCourses function called.');
+
+        // Get configuration
+        const config = await getConfig();
+        if (!config) {
+            log('无配置信息,退出自动登录');
+            return;
+        }
+
+        const {
+            username: username_value,
+            password: password_value,
+            actionDelay = 100
+        } = config;
+
+        // 等待登录表单加载 - courses 使用不同的表单选择器
+        const loginForm = await waitForElement('form', 5000);
+        if (!loginForm) {
+            log('Login form not found after waiting. Exiting.');
+            return;
+        }
+        log('Recognized as Courses login page.');
+        log(`Login form found. Action: ${loginForm.action}`);
+
+        // courses.usst.edu.cn 使用 userName 而不是 username
+        const usernameField = await waitForElement('input[name="userName"]', 3000)
+            || await waitForElement('#userName', 3000)
+            || await waitForElement('input[type="text"]', 3000);
+        const passwordField = await waitForElement('input[name="password"]', 3000)
+            || await waitForElement('#password', 3000)
+            || await waitForElement('input[type="password"]', 3000);
+
+        if (!usernameField || !passwordField) {
+            log('Username or password field not found after waiting.');
+            return;
+        }
+
+        // Check if fields are available
+        if (usernameField.disabled || passwordField.disabled) {
+            log('Username or password field is disabled.');
+            return;
+        }
+
+        // Fill form and trigger events (simulate user input)
+        fillFieldWithEvents(usernameField, username_value);
+        log('Username field populated with events.');
+
+        await sleep(actionDelay / 2); // Short delay between username and password
+
+        fillFieldWithEvents(passwordField, password_value);
+        log('Password field populated with events.');
+
+        // Use configured actionDelay
+        await sleep(actionDelay);
+        log(`Waited ${actionDelay}ms for event processing.`);
+
+        // Trigger blur events
+        usernameField.dispatchEvent(new Event('blur', { bubbles: true }));
+        passwordField.dispatchEvent(new Event('blur', { bubbles: true }));
+
+        await sleep(actionDelay * 2);
+
+        // Submit form
+        await submitFormCourses(loginForm);
+    }
+
+    /**
+     * Auto login function (legacy, routes to appropriate handler)
      */
     async function autoLogin() {
         log('autoLogin function called.');
@@ -413,6 +562,48 @@
         }
     }
 
+    /**
+     * Submit the login form for Courses site
+     * @param {HTMLFormElement} loginForm - The login form element
+     */
+    async function submitFormCourses(loginForm) {
+        log('Attempting to submit Courses form...');
+
+        // courses.usst.edu.cn 的提交按钮选择器
+        const submitButton = loginForm.querySelector('button[type="submit"]')
+            || loginForm.querySelector('input[type="submit"]')
+            || loginForm.querySelector('.login-btn')
+            || loginForm.querySelector('button');
+
+        if (submitButton) {
+            log(`Found submit button: ${submitButton.tagName}#${submitButton.id || '(no id)'}.${submitButton.className || '(no class)'}`);
+
+            // Check if button is available
+            if (submitButton.disabled) {
+                log('Submit button is disabled. Cannot submit.');
+                return;
+            }
+
+            log('Clicking submit button...');
+            submitButton.click();
+        } else {
+            log('Submit button not found. Attempting direct form submission...');
+            // Fallback: trigger form submit event
+            const submitEvent = new Event('submit', {
+                bubbles: true,
+                cancelable: true
+            });
+
+            if (loginForm.dispatchEvent(submitEvent)) {
+                // If event is not prevented, submit directly
+                log('Submit event not prevented, calling form.submit()');
+                loginForm.submit();
+            } else {
+                log('Submit event was prevented (validation may have failed)');
+            }
+        }
+    }
+
     // Register menu command to allow users to modify configuration anytime
     GM_registerMenuCommand('⚙️ 修改登录配置', async () => {
         await showConfigDialog(false);
@@ -421,12 +612,16 @@
     });
 
     // Main logic
-    const specificCasLoginUrlPattern = 'https://ids6.usst.edu.cn/authserver/login';
+    const casLoginUrlPattern = 'https://ids6.usst.edu.cn/authserver/login';
+    const coursesLoginUrlPattern = 'https://courses.usst.edu.cn/auth/oauth/2.0/authorize';
+
     log(`Current page URL: ${window.location.href}`);
 
-    if (window.location.href.startsWith(specificCasLoginUrlPattern)) {
-        log(`Matched specific CAS login URL pattern: "${specificCasLoginUrlPattern}". Proceeding with autoLogin.`);
-
+    /**
+     * Start auto-login with configured delay
+     * @param {Function} loginFn - The login function to execute
+     */
+    function startAutoLogin(loginFn) {
         // Ensure DOM is fully loaded before execution
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', () => {
@@ -434,7 +629,7 @@
                     if (config) {
                         const startupDelay = config.startupDelay || 10;
                         log(`Starting auto-login after ${startupDelay}ms delay...`);
-                        setTimeout(autoLogin, startupDelay);
+                        setTimeout(loginFn, startupDelay);
                     }
                 });
             });
@@ -444,12 +639,21 @@
                 if (config) {
                     const startupDelay = config.startupDelay || 10;
                     log(`Starting auto-login after ${startupDelay}ms delay...`);
-                    setTimeout(autoLogin, startupDelay);
+                    setTimeout(loginFn, startupDelay);
                 }
             });
         }
+    }
+
+    // Check which login page we're on and execute appropriate handler
+    if (window.location.href.startsWith(casLoginUrlPattern)) {
+        log(`Matched CAS login URL pattern: "${casLoginUrlPattern}". Proceeding with autoLoginCAS.`);
+        startAutoLogin(autoLoginCAS);
+    } else if (window.location.href.startsWith(coursesLoginUrlPattern)) {
+        log(`Matched Courses login URL pattern: "${coursesLoginUrlPattern}". Proceeding with autoLoginCourses.`);
+        startAutoLogin(autoLoginCourses);
     } else {
-        log(`URL does not match specific CAS login pattern "${specificCasLoginUrlPattern}". Auto-login will not run on this page.`);
+        log(`URL does not match any known login pattern. Auto-login will not run on this page.`);
     }
 
 })();
